@@ -16,7 +16,8 @@
     "test": "vitest run --project unit",
     "test:watch": "vitest --project unit",
     "test:integration": "vitest run --project integration --passWithNoTests",
-    "test:e2e": "vitest run --project e2e --passWithNoTests"
+    "test:e2e": "vitest run --project e2e --passWithNoTests",
+    "stack:wait": "tsx scripts/wait-for-stack.ts"
   },
   "dependencies": {
     "@chroma-core/default-embed": "0.1.9",
