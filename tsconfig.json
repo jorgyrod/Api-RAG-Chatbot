@@ -39,8 +39,7 @@
     "scripts/**/*.ts",
     "mock-services/**/*.ts",
     "fixtures/**/*.ts",
-    "vitest.config.ts",
-    "eslint.config.ts"
+    "vitest.config.ts"
   ],
   "exclude": ["node_modules", "dist"]
 }
