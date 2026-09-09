@@ -1,0 +1,45 @@
+{
+  "compilerOptions": {
+    /* Target y librerías: Node 22 soporta ES2023 completo. */
+    "target": "ES2023",
+    "lib": ["ES2023"],
+
+    /* Módulos: ESM real de Node. Obliga a escribir la extensión .js en
+       los imports relativos, igual que hace el runtime. */
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+
+    "rootDir": ".",
+    "outDir": "dist",
+
+    /* Rigor máximo: este proyecto trata sobre permisos, y un `any`
+       silencioso en el resolver es una vulnerabilidad. */
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "exactOptionalPropertyTypes": true,
+    "useUnknownInCatchVariables": true,
+
+    /* Interop y emisión */
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "verbatimModuleSyntax": true,
+    "skipLibCheck": true,
+    "declaration": false,
+    "sourceMap": true
+  },
+  "include": [
+    "src/**/*.ts",
+    "tests/**/*.ts",
+    "scripts/**/*.ts",
+    "mock-services/**/*.ts",
+    "fixtures/**/*.ts",
+    "vitest.config.ts"
+  ],
+  "exclude": ["node_modules", "dist"]
+}

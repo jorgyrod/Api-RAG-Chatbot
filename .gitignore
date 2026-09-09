@@ -1,0 +1,25 @@
+node_modules/
+dist/
+coverage/
+*.log
+
+# Secretos: nunca en el repositorio. Solo se versiona .env.example.
+.env
+.env.local
+.env.*.local
+
+# Artefactos generados por scripts (se recrean con `npm run fixtures`).
+backend/storage/documents/*.pdf
+backend/storage/documents/*.docx
+backend/fixtures/manifest.xlsx
+
+# Modelo ONNX descargado por @chroma-core/default-embed
+.cache/
+models/
+
+# Sistema operativo / editores
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
