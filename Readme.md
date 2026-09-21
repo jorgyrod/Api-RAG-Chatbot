@@ -109,3 +109,40 @@ Para visualizar como funciona:
 ```bash
 npm run chunks
 ```
+
+## 5. Embeddings
+
+En esta etapa convertimos el texto en vectores numéricos para poder comparar significados. Se utiliza `@chroma-core/default-embed` con el modelo multilingüe `Xenova/paraphrase-multilingual-MiniLM-L12-v2`, adecuado para trabajar con contenido en español.
+
+El modelo se ejecuta localmente dentro de Node.js, por lo que no requiere una API key ni llamadas a un servicio externo después de la primera descarga. Se utiliza la variante cuantizada `q8`, que ocupa aproximadamente 118 MB. Cada texto produce un vector de 384 dimensiones, sin importar si el texto es corto o largo.
+
+### Flujo implementado
+
+1. Se genera un embedding para una frase individual y se muestran sus dimensiones, algunos valores, su rango y su longitud.
+2. Se compara una pregunta con varios textos candidatos mediante similitud coseno.
+3. Se comprueba que la búsqueda encuentre significados relacionados aunque no existan exactamente las mismas palabras.
+4. Se extrae el texto del contrato, se divide en chunks y se genera un vector para cada chunk.
+5. Se calcula el ranking de los chunks más parecidos a la pregunta del usuario.
+
+La similitud coseno produce valores cercanos a `1` cuando dos vectores tienen un significado similar y valores más bajos cuando el contenido está menos relacionado. Esta es la misma medida que utilizará ChromaDB para comparar los vectores almacenados.
+
+### Archivos relacionados
+
+- `src/ingest/embeddings.ts`: configura el modelo y expone funciones para generar embeddings individuales o por lotes.
+- `src/scripts/embeddings.ts`: ejecuta las pruebas de similitud y vectoriza los chunks del contrato.
+- `src/ingest/pdf.ts`: extrae el texto del PDF utilizado en la prueba.
+- `src/ingest/chunking.ts`: divide el texto en chunks antes de vectorizarlo.
+- `package.json`: contiene el script `embeddings` y la dependencia del modelo.
+
+Para ejecutar la etapa:
+
+```bash
+npm run embeddings
+```
+
+La primera ejecución descarga el modelo y puede tardar más. Las siguientes ejecuciones reutilizan la descarga almacenada en la caché local.
+
+### Reglas importantes
+
+- El mismo modelo y la misma función deben utilizarse al indexar documentos y al realizar consultas. Si se utilizan modelos diferentes, sus vectores no serán comparables.
+- En aplicaciones RAG en español conviene validar el modelo con una frase que deba acertar, otra relacionada y una frase claramente irrelevante. El contenido irrelevante debe quedar por debajo de los resultados relacionados.

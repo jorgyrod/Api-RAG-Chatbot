@@ -11,7 +11,8 @@
     "excel:generate": "tsx src/scripts/generate-excel.ts",
     "excel:read": "tsx src/scripts/read-excel.ts",
     "pdf:read": "tsx src/scripts/read-pdf.ts",
-    "chunks": "tsx src/scripts/chunks.ts"
+    "chunks": "tsx src/scripts/chunks.ts",
+    "embeddings": "tsx src/scripts/embeddings.ts"
   },
   "keywords": [
     "RAG",
@@ -19,6 +20,7 @@
   ],
   "author": "Jorge Luis Rodriguez",
   "dependencies": {
+    "@chroma-core/default-embed": "^0.1.9",
     "cors": "^2.8.6",
     "dotenv": "^18.0.1",
     "exceljs": "^4.4.0",
@@ -37,6 +39,7 @@
     "typescript": "^7.0.2"
   },
   "overrides": {
-    "uuid": "^11.1.1"
+    "uuid": "^11.1.1",
+    "sharp": "^0.35.4"
   }
 }
