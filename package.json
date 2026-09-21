@@ -14,7 +14,8 @@
     "chunks": "tsx src/scripts/chunks.ts",
     "embeddings": "tsx src/scripts/embeddings.ts",
     "chroma": "tsx src/scripts/chroma.ts",
-    "ingest": "tsx src/ingest/ingest.ts"
+    "ingest": "tsx src/ingest/ingest.ts",
+    "retrieval": "tsx src/scripts/retrieval.ts"
   },
   "keywords": [
     "RAG",

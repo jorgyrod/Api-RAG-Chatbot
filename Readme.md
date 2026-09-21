@@ -281,3 +281,73 @@ npm run ingest
 - `src/chroma/chroma.ts`: configura la colección de ChromaDB.
 - `src/db/schema.sql`: define `indexed_at` y las tablas de PostgreSQL.
 - `package.json`: contiene el script `ingest`.
+
+## 8. RAG: pregunta, embeddings y búsqueda con permisos
+
+En esta etapa se integra el flujo RAG completo de recuperación. El sistema recibe una pregunta, la transforma en un embedding, consulta la base vectorial ChromaDB y recupera los chunks más relevantes sin exponer documentos que el usuario no tiene autorizados.
+
+La generación de la respuesta todavía no forma parte de este stage. Actualmente se implementa la fase de retrieval, que prepara el contexto que posteriormente utilizará el modelo generativo.
+
+### Flujo de recuperación
+
+1. El usuario realiza una pregunta en lenguaje natural.
+2. PostgreSQL obtiene los documentos permitidos para el usuario mediante la tabla `user_documents`.
+3. La pregunta se convierte en un embedding usando el mismo modelo empleado durante la indexación.
+4. ChromaDB busca los chunks más similares aplicando un filtro por `documentId`.
+5. El resultado devuelve el documento, el índice del chunk, su texto y la distancia calculada.
+
+La búsqueda no se realiza si el usuario no tiene documentos autorizados. En ese caso, el resultado es una lista vacía y ChromaDB ni siquiera se consulta.
+
+### Ejemplo de permisos
+
+```text
+USR001 -> DOC001, DOC002
+USR002 -> DOC003
+USR999 -> ningún documento
+```
+
+Para `USR001`, ChromaDB recibe únicamente `DOC001` y `DOC002` en el filtro. Aunque `DOC003` esté indexado, ningún chunk de ese documento puede aparecer en los resultados autorizados.
+
+Para `USR999`, PostgreSQL devuelve una lista vacía y no se ejecuta ninguna consulta contra ChromaDB.
+
+### Distancia, similitud y orden de resultados
+
+Antes de interpretar los resultados, hay que revisar el nombre del campo que devuelve la biblioteca:
+
+- `distance` o `dist`: un valor menor significa que el resultado está más cerca de la pregunta.
+- `score`, `similarity` o `certainty`: un valor mayor significa que el resultado es más relevante.
+
+En este proyecto ChromaDB devuelve `distance` porque la colección utiliza la métrica coseno. Por eso los resultados deben ordenarse de menor a mayor distancia. La similitud equivalente puede expresarse como `1 - distance`, pero el ranking se basa en la distancia que devuelve ChromaDB.
+
+### Validación con un caso obvio
+
+Para comprobar que el ranking funciona, se utiliza una pregunta cuya respuesta conocemos de antemano:
+
+```text
+Pregunta: ¿Qué debo pagar si quiero desistir de mi fideicomiso?
+```
+
+El chunk que contiene la pena convencional debe aparecer entre los primeros resultados. En las pruebas actuales, el chunk 7 contiene la información de la pena del 3 % y los `$5.000`, por lo que debe quedar por encima de fragmentos irrelevantes. Esta comprobación sencilla ayuda a detectar rápidamente un modelo, una métrica o un ordenamiento configurado incorrectamente.
+
+### No interpretar el valor absoluto
+
+El número de `distance`, `similarity`, `score` o `certainty` no representa necesariamente un porcentaje de coincidencia. Un valor como `0.51` no significa que exista un 51 % de coincidencia.
+
+El valor absoluto depende del modelo de embeddings, el idioma, la métrica y el conjunto de documentos. Lo importante es comparar el orden relativo de los resultados dentro de la misma consulta.
+
+### Archivos relacionados
+
+- `src/scripts/retrieval.ts`: ejecuta las pruebas de recuperación para `USR001`, `USR002` y `USR999`.
+- `src/services/user.service.ts`: obtiene desde PostgreSQL los documentos autorizados para cada usuario.
+- `src/services/rag.service.ts`: genera el embedding de la pregunta y consulta ChromaDB con el filtro de documentos.
+- `src/ingest/embeddings.ts`: utiliza el mismo modelo para generar el vector de la pregunta.
+- `src/chroma/chroma.ts`: proporciona la colección configurada con distancia coseno.
+- `package.json`: contiene el script `retrieval`.
+
+Para ejecutar esta etapa:
+
+```bash
+npm run retrieval
+```
+
+La consulta sin filtro que aparece en el script es únicamente una demostración del riesgo: permite observar qué documentos podrían filtrarse si se olvidaran los permisos. La búsqueda real debe obtener primero los documentos permitidos desde PostgreSQL y aplicar siempre ese filtro en ChromaDB.
