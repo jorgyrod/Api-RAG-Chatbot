@@ -146,3 +146,72 @@ La primera ejecución descarga el modelo y puede tardar más. Las siguientes eje
 
 - El mismo modelo y la misma función deben utilizarse al indexar documentos y al realizar consultas. Si se utilizan modelos diferentes, sus vectores no serán comparables.
 - En aplicaciones RAG en español conviene validar el modelo con una frase que deba acertar, otra relacionada y una frase claramente irrelevante. El contenido irrelevante debe quedar por debajo de los resultados relacionados.
+
+## 6. Integración con ChromaDB
+
+En esta etapa conectamos la aplicación con el servidor de ChromaDB iniciado mediante Docker Compose. ChromaDB funciona como la base vectorial: recibe los chunks de los documentos junto con sus embeddings y permite recuperar los fragmentos más relacionados con una pregunta.
+
+### Configuración
+
+El cliente utiliza la colección `documents` y configura la distancia coseno. Los embeddings se generan previamente en la aplicación, por lo que ChromaDB no crea embeddings por su cuenta (`embeddingFunction: null`). Esto garantiza que tanto los documentos indexados como las consultas utilicen el mismo modelo definido en la sección anterior.
+
+Con la configuración actual, Docker publica ChromaDB en el puerto `8001` del equipo y lo conecta con el puerto `8000` dentro del contenedor:
+
+```text
+localhost:8001 -> contenedor ChromaDB:8000
+```
+
+### Indexación implementada
+
+El script `src/scripts/chroma.ts` comienza eliminando la colección anterior para que cada ejecución sea reproducible. Después procesa dos documentos:
+
+- `DOC001`: `storage/contrato-fideicomiso.pdf`
+- `DOC003`: `storage/otro-contrato.pdf`
+
+Para cada documento se extrae el texto, se divide en chunks y se genera un embedding por chunk. ChromaDB almacena estos datos:
+
+- `id`: identificador compuesto, por ejemplo `DOC001::7`.
+- `document`: texto del chunk.
+- `embedding`: vector de 384 dimensiones.
+- `metadata`: `documentId`, `documentName` y `chunkIndex`.
+
+### Consultas y permisos
+
+Después de indexar los documentos, el script ejecuta una búsqueda semántica para la pregunta `desistir del fideicomiso`. La consulta solicita los cuatro resultados más cercanos y muestra sus documentos, chunks, distancias y similitudes.
+
+También se ejecuta la misma búsqueda con un filtro:
+
+```ts
+where: {
+  documentId: {
+    $in: ["DOC001"];
+  }
+}
+```
+
+El filtro representa la futura validación de permisos. Aunque `DOC003` también está indexado, una consulta autorizada únicamente para `DOC001` no debe devolver ningún chunk de `DOC003`.
+
+Finalmente, se comparan tres formulaciones de una misma intención para observar cómo cambia el ranking según la pregunta. El experimento identifica el chunk 7 como el más relevante porque contiene la información sobre la pena del 3 % y los `$5.000`.
+
+### Archivos relacionados
+
+- `docker-compose.yml`: levanta ChromaDB con almacenamiento persistente.
+- `src/chroma/chroma.ts`: crea el cliente, define la colección y el tipo de metadata.
+- `src/scripts/chroma.ts`: indexa documentos, consulta la colección y prueba el filtro por documento.
+- `src/ingest/embeddings.ts`: genera los vectores que se guardan y consultan en ChromaDB.
+- `src/ingest/pdf.ts`: extrae el texto de los documentos.
+- `src/ingest/chunking.ts`: divide el texto en fragmentos.
+- `package.json`: contiene el script `chroma` y la dependencia `chromadb`.
+
+Para ejecutar esta etapa:
+
+```bash
+docker compose up -d chroma
+npm run chroma
+```
+
+Para detener únicamente ChromaDB:
+
+```bash
+docker compose stop chroma
+```
