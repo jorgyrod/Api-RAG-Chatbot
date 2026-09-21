@@ -422,3 +422,106 @@ http://localhost:3000/mock/trust/USR001
 ```
 
 Este stage todavía no genera una respuesta final con un modelo de lenguaje. Actualmente demuestra la integración de contexto documental y datos externos, que posteriormente serán entregados al modelo generativo como contexto para construir la respuesta al usuario.
+
+## 10. El LLM
+
+En esta etapa se incorpora un modelo de lenguaje para generar la respuesta final a partir del contexto recuperado. El modelo utilizado es `claude-haiku-4-5`, consumido mediante el SDK oficial `@anthropic-ai/sdk`.
+
+El flujo RAG completo queda así:
+
+```text
+Pregunta del usuario
+  │
+  ├──► PostgreSQL: documentos permitidos
+  │
+  ├──► ChromaDB: chunks relevantes con filtro de permisos
+  │
+  ├──► API: datos actuales del fideicomiso
+  │
+  └──► Prompt: documentos + datos de API + pregunta
+       │
+       ▼
+        Claude Haiku
+       │
+       ▼
+     Respuesta en español
+```
+
+### Flujo implementado
+
+El script `src/scripts/llm.ts` ejecuta los siguientes pasos:
+
+1. Obtiene desde PostgreSQL los documentos autorizados para el usuario.
+2. Busca en ChromaDB los cuatro chunks más relevantes, aplicando el filtro de permisos.
+3. Consulta mediante la API la información actual del fideicomiso del usuario.
+4. Construye un prompt con los chunks recuperados, los datos del fideicomiso y la pregunta original.
+5. Envía el prompt a Claude y muestra la respuesta generada.
+
+El prompt separa la información en tres bloques:
+
+- `CONTEXT`: fragmentos de los documentos, con el nombre del documento y el índice del chunk.
+- `TRUST DATA`: identificador, estado, saldo y fecha de apertura del fideicomiso.
+- `USER QUESTION`: pregunta original del usuario.
+
+### Reglas del modelo
+
+El mensaje de sistema indica al modelo que debe:
+
+- responder únicamente con la información recibida en el contexto;
+- indicar `No encuentro esa información en tus documentos` cuando el contexto sea insuficiente;
+- no inventar números, fechas límite ni condiciones;
+- citar el documento utilizado entre paréntesis;
+- realizar cálculos cuando los datos del fideicomiso lo permitan;
+- responder en español, de forma breve y en un máximo de seis líneas.
+
+La respuesta se extrae únicamente de los bloques de texto devueltos por la API. Si el modelo devuelve una negativa explícita, se muestra un mensaje genérico de imposibilidad de respuesta.
+
+### Ejemplo de cálculo con contexto mixto
+
+La pregunta por el desistimiento del fideicomiso requiere combinar dos fuentes:
+
+```text
+Documento: pena convencional del 3 % del saldo + $5.000 de gastos
+API:       saldo de USR001 = 12.000.000 COP
+LLM:       3 % de 12.000.000 = 360.000 COP
+     360.000 + 5.000 = 365.000 COP
+```
+
+El documento aporta la regla del cálculo y la API aporta el saldo actual. El LLM puede explicar el resultado porque recibe ambas piezas dentro del mismo prompt.
+
+### Configuración y ejecución
+
+La llamada utiliza el modelo `claude-haiku-4-5` con un máximo de `4000` tokens de salida. Es necesario configurar `ANTHROPIC_API_KEY` como variable de entorno antes de ejecutar el script.
+
+Para ejecutar la pregunta por defecto con `USR001`:
+
+```bash
+npm run llm
+```
+
+También se pueden enviar el usuario y la pregunta como argumentos:
+
+```bash
+npm run llm -- USR002 "¿Cuál es el estado de mi fideicomiso?"
+```
+
+Si `ANTHROPIC_API_KEY` no está configurada, el script ejecuta igualmente la recuperación y muestra el prompt completo, pero no realiza la llamada al modelo.
+
+### Importante: coste y tokens
+
+Con `claude-haiku-4-5`, el coste estimado de esta consulta es menor de un cuarto de centavo: aproximadamente 425 preguntas por dólar. Si se hubiera utilizado un modelo con precios de `5 USD` por millón de tokens de entrada y `25 USD` por millón de tokens de salida, como el escenario de Opus considerado, la misma pregunta habría costado aproximadamente `0,0117 USD`, cerca de cinco veces más. Para este caso de uso, Haiku ofrece una respuesta suficiente con un coste mucho menor.
+
+En la prueba se utilizaron aproximadamente `1.291` tokens de entrada y `211` tokens de salida. La entrada domina el coste porque contiene principalmente los cuatro chunks recuperados y enviados al prompt. Reducir la cantidad de chunks, o su tamaño, puede disminuir casi proporcionalmente el coste y también la latencia. Esta es una de las principales palancas de ahorro en un sistema RAG.
+
+Los embeddings no generan un coste de API en esta implementación porque el modelo se ejecuta localmente. Si posteriormente se utiliza un proveedor externo para embeddings, cada pregunta y cada documento indexado podrían tener un coste adicional de vectorización.
+
+El servicio registra los tokens de entrada y salida devueltos por Anthropic para poder controlar el consumo a medida que crezca el sistema. Las cifras anteriores son una estimación de la prueba y deben recalcularse si cambian el modelo, sus precios, la cantidad de chunks o el tamaño del prompt.
+
+### Archivos relacionados
+
+- `src/services/llm.service.ts`: construye el prompt y llama a Anthropic.
+- `src/scripts/llm.ts`: coordina permisos, retrieval, datos de API y generación de respuesta.
+- `src/services/rag.service.ts`: obtiene los chunks filtrados desde ChromaDB.
+- `src/services/trusts.service.ts`: obtiene los datos actuales del fideicomiso.
+- `src/services/user.service.ts`: obtiene los documentos permitidos desde PostgreSQL.
+- `package.json`: contiene el script `llm` y la dependencia `@anthropic-ai/sdk`.

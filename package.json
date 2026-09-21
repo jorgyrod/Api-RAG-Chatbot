@@ -16,7 +16,8 @@
     "chroma": "tsx src/scripts/chroma.ts",
     "ingest": "tsx src/ingest/ingest.ts",
     "retrieval": "tsx src/scripts/retrieval.ts",
-    "trusts": "tsx src/scripts/trusts.ts"
+    "trusts": "tsx src/scripts/trusts.ts",
+    "llm": "tsx src/scripts/llm.ts"
   },
   "keywords": [
     "RAG",
@@ -24,6 +25,7 @@
   ],
   "author": "Jorge Luis Rodriguez",
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.127.0",
     "@chroma-core/default-embed": "^0.1.9",
     "chromadb": "^3.5.0",
     "cors": "^2.8.6",
