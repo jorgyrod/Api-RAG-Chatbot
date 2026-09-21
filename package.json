@@ -9,7 +9,8 @@
     "typecheck": "tsc --noEmit",
     "db:setup": "tsx src/db/setup.ts",
     "excel:generate": "tsx src/scripts/generate-excel.ts",
-    "excel:read": "tsx src/scripts/read-excel.ts"
+    "excel:read": "tsx src/scripts/read-excel.ts",
+    "pdf:read": "tsx src/scripts/read-pdf.ts"
   },
   "keywords": [
     "RAG",
@@ -21,13 +22,16 @@
     "dotenv": "^18.0.1",
     "exceljs": "^4.4.0",
     "express": "^5.2.1",
+    "pdf-parse": "^2.4.5",
     "pg": "^8.23.0"
   },
   "devDependencies": {
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
     "@types/node": "^26.6.2",
+    "@types/pdfkit": "^0.17.6",
     "@types/pg": "^8.23.1",
+    "pdfkit": "^0.20.2",
     "tsx": "^4.23.15",
     "typescript": "^7.0.2"
   },

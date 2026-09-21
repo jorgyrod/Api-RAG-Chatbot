@@ -75,3 +75,18 @@ Para generar y leer el archivo:
 npm run excel:generate
 npm run excel:read
 ```
+
+## 3. Lectura de PDF's
+
+Para validar que efectivamente estamos leyendo los archivos contaremos con 3 archivos de prueba que se encontraran en el folder 'storage', estos junto
+con el script creado para ver en consola que efectivamente se esta extrayendo el texto de estos PDF's, son como pruebas aproximadamente.
+
+### Archivos relacionados
+
+- `src/ingest/pdf.ts`: contiene la lógica de trabajo con archivos PDF.
+- `src/scripts/read-pdf.ts`: lee y muestra los datos del archivo.
+- `package.json`: contiene los scripts lectura.
+
+```bash
+npm run pdf:read
+```
