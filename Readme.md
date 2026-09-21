@@ -87,6 +87,25 @@ con el script creado para ver en consola que efectivamente se esta extrayendo el
 - `src/scripts/read-pdf.ts`: lee y muestra los datos del archivo.
 - `package.json`: contiene los scripts lectura.
 
+Para visualizar como funciona:
+
 ```bash
 npm run pdf:read
+```
+
+## 4. Chunking
+
+Ahora haremos el respectivo chunking o particionamiento de texto para pasarlo a nuestro modelo de embeddings posteriormente,
+la estrategia a utilizar por ahora es cortar por caracteres y solapamiento, mas adelante se trabajaran otros modos de chunking
+
+### Archivos relacionados
+
+- `src/ingest/chunking.ts`: contiene la lógica chunking.
+- `src/scripts/chunks.ts`: lee y muestra los datos despues de procesarlo por chunking
+- `package.json`: contiene los scripts lectura.
+
+Para visualizar como funciona:
+
+```bash
+npm run chunks
 ```

@@ -10,7 +10,8 @@
     "db:setup": "tsx src/db/setup.ts",
     "excel:generate": "tsx src/scripts/generate-excel.ts",
     "excel:read": "tsx src/scripts/read-excel.ts",
-    "pdf:read": "tsx src/scripts/read-pdf.ts"
+    "pdf:read": "tsx src/scripts/read-pdf.ts",
+    "chunks": "tsx src/scripts/chunks.ts"
   },
   "keywords": [
     "RAG",
