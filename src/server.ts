@@ -1,6 +1,7 @@
 import "dotenv/config";
 import express from "express";
 import cors from "cors";
+import { mockRoutes } from "./routes/mockApi.routes";
 
 const app = express();
 
@@ -15,6 +16,8 @@ app.get("/health", (req, res) => {
     time: new Date().toISOString(),
   });
 });
+
+app.use("/mock", mockRoutes);
 
 const PORT = process.env.PORT || 3000;
 

@@ -351,3 +351,74 @@ npm run retrieval
 ```
 
 La consulta sin filtro que aparece en el script es únicamente una demostración del riesgo: permite observar qué documentos podrían filtrarse si se olvidaran los permisos. La búsqueda real debe obtener primero los documentos permitidos desde PostgreSQL y aplicar siempre ese filtro en ChromaDB.
+
+## 9. RAG híbrido: documentos y datos de una API
+
+El siguiente stage combina dos fuentes de información para responder preguntas que no pueden resolverse utilizando únicamente documentos o únicamente datos operativos:
+
+- **ChromaDB** aporta el conocimiento semántico del contrato, por ejemplo la regla que indica una pena convencional del 3 % y `$5.000` de gastos.
+- **La API** aporta datos actuales del fideicomiso, por ejemplo el saldo, el estado y la fecha de apertura de un usuario.
+
+La respuesta se construye combinando ambas fuentes. En este ejemplo, el documento explica qué cálculo debe realizarse y la API proporciona el saldo sobre el que se aplica:
+
+```text
+Contrato: pena del 3 % del saldo + $5.000 de gastos
+API:      saldo de USR001 = 12.000.000 COP
+Resultado: 360.000 COP + 5.000 COP de gastos
+```
+
+Ninguna fuente por separado puede responder completamente esta pregunta: el contrato contiene la regla de negocio, pero no necesariamente el saldo actual; la API contiene el saldo, pero no explica la penalización contractual.
+
+### Cliente de la API
+
+El servicio `getTrusts` consulta el endpoint `GET /mock/trust/:userId` usando el usuario recibido. La URL base se configura mediante `API_BASE_URL` y, si no existe, utiliza `http://localhost:3000`.
+
+La petición tiene un tiempo máximo de espera de tres segundos. Si el endpoint devuelve un estado distinto de `2xx` o no responde, el servicio devuelve `null` y registra el error sin interrumpir todo el proceso.
+
+### Casos probados
+
+El script prueba tres usuarios:
+
+```text
+USR001 -> devuelve el fideicomiso FID001
+USR002 -> devuelve el fideicomiso FID002
+USR999 -> devuelve null porque no existe información
+```
+
+El endpoint mock expone datos de prueba para `USR001` y `USR002`. Para otros usuarios responde con `404`.
+
+### Archivos relacionados
+
+- `src/services/trusts.service.ts`: consulta el fideicomiso de un usuario mediante HTTP.
+- `src/scripts/trusts.ts`: prueba la API con varios usuarios y combina el saldo con la regla del contrato.
+- `src/routes/mockApi.routes.ts`: expone el endpoint mock `GET /mock/trust/:userId`.
+- `src/server.ts`: inicia el servidor Express y registra la ruta `/mock`.
+- `package.json`: contiene el script `trusts` y el script `dev`.
+
+### Ejecución
+
+En una terminal, inicia el servidor:
+
+```bash
+npm run dev
+```
+
+En otra terminal, ejecuta las consultas:
+
+```bash
+npm run trusts
+```
+
+El servidor queda disponible por defecto en `http://localhost:3000`. La comprobación de salud está disponible en:
+
+```text
+http://localhost:3000/health
+```
+
+También se puede consultar directamente el endpoint mock:
+
+```text
+http://localhost:3000/mock/trust/USR001
+```
+
+Este stage todavía no genera una respuesta final con un modelo de lenguaje. Actualmente demuestra la integración de contexto documental y datos externos, que posteriormente serán entregados al modelo generativo como contexto para construir la respuesta al usuario.

@@ -15,7 +15,8 @@
     "embeddings": "tsx src/scripts/embeddings.ts",
     "chroma": "tsx src/scripts/chroma.ts",
     "ingest": "tsx src/ingest/ingest.ts",
-    "retrieval": "tsx src/scripts/retrieval.ts"
+    "retrieval": "tsx src/scripts/retrieval.ts",
+    "trusts": "tsx src/scripts/trusts.ts"
   },
   "keywords": [
     "RAG",
