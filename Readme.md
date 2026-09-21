@@ -215,3 +215,69 @@ Para detener únicamente ChromaDB:
 ```bash
 docker compose stop chroma
 ```
+
+## 7. Pipeline de ingesta
+
+La ingesta completa conecta el archivo Excel, PostgreSQL, los archivos PDF, el modelo de embeddings y ChromaDB. A diferencia del script de pruebas de la sección anterior, este pipeline procesa los documentos registrados en PostgreSQL y conserva su estado de indexación mediante la columna `indexed_at`.
+
+### Flujo completo
+
+```text
+data/documents.xlsx
+        │
+        ├──► users, documents, user_documents ───► PostgreSQL
+        │
+        └──► por cada documento pendiente de indexar:
+                │
+                ├── storage/documento.pdf
+                │       │
+                │       └── extraer texto
+                │
+                ├── texto plano
+                │       └── crear chunks con solapamiento
+                │
+                ├── chunks
+                │       └── generar embeddings de 384 dimensiones
+                │
+                ├── vectores y metadata
+                │       └── collection.upsert() ───► ChromaDB
+                │
+                └── actualizar indexed_at ─────────► PostgreSQL
+```
+
+### Comportamiento del pipeline
+
+1. Lee las filas de `data/documents.xlsx` y obtiene los usuarios y documentos únicos.
+2. Guarda usuarios, documentos y relaciones de permisos en PostgreSQL sin duplicar registros existentes.
+3. Consulta los documentos registrados y procesa únicamente aquellos cuyo `indexed_at` sea `NULL`.
+4. Extrae el texto del PDF, lo divide en chunks y genera sus embeddings.
+5. Guarda cada chunk en ChromaDB mediante `upsert`, usando IDs con el formato `DOCUMENT_ID_chunkIndex`.
+6. Al terminar correctamente, actualiza `documents.indexed_at` para marcar el documento como indexado.
+7. Muestra un resumen de documentos indexados, documentos omitidos, chunks procesados y permisos finales.
+
+Usar `upsert` permite volver a ejecutar la ingesta sin duplicar los chunks. Los documentos que ya tienen fecha en `indexed_at` se omiten en ejecuciones posteriores.
+
+### Reinicio completo
+
+El argumento `--reset` elimina la colección de ChromaDB y limpia `indexed_at` en PostgreSQL. De esta forma, la siguiente ejecución vuelve a procesar todos los documentos:
+
+```bash
+npm run ingest -- --reset
+```
+
+### Ejecución normal
+
+```bash
+npm run ingest
+```
+
+### Archivos relacionados
+
+- `src/ingest/ingest.ts`: coordina el pipeline completo.
+- `src/ingest/excel.ts`: lee las filas del archivo Excel.
+- `src/ingest/pdf.ts`: extrae texto de los documentos PDF.
+- `src/ingest/chunking.ts`: divide el texto en chunks.
+- `src/ingest/embeddings.ts`: genera los vectores.
+- `src/chroma/chroma.ts`: configura la colección de ChromaDB.
+- `src/db/schema.sql`: define `indexed_at` y las tablas de PostgreSQL.
+- `package.json`: contiene el script `ingest`.

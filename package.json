@@ -13,7 +13,8 @@
     "pdf:read": "tsx src/scripts/read-pdf.ts",
     "chunks": "tsx src/scripts/chunks.ts",
     "embeddings": "tsx src/scripts/embeddings.ts",
-    "chroma": "tsx src/scripts/chroma.ts"
+    "chroma": "tsx src/scripts/chroma.ts",
+    "ingest": "tsx src/ingest/ingest.ts"
   },
   "keywords": [
     "RAG",
