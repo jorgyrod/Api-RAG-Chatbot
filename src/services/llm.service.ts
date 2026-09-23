@@ -65,7 +65,7 @@ export function buildPrompt(
  * Manda el prompt construido al modelo LLM y devuelve la respuesta.
  */
 export async function generateResponse(prompt: string): Promise<string> {
-  const anthropic = new Anthropic();
+  const anthropic = new Anthropic({ maxRetries: 5 });
 
   const response = await anthropic.messages.create({
     model: LLM_MODEL,
