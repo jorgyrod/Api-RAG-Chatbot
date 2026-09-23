@@ -12,7 +12,8 @@ const INSTRUCTIONS = `You are a very helpful assistant who provides accurate and
     - Never make up numbers, deadlines, or conditions; stick strictly to the given context.
     - Cite the document from which you are drawing each piece of information in parentheses. Example: (Trust Agreement).
     - If the TRUST INFORMATION allows you to calculate a specific amount, calculate it and show the calculation.
-    - Answer in Spanish, briefly and clearly, in no more than 6 lines.`;
+    - Answer in Spanish, briefly and clearly, in no more than 6 lines.
+    - Write in plain text: no Markdown, no asterisks, and no hash tags. You can use simple numbered lists (“1. ...”) and line breaks.`;
 
 /**
  * Arma el texto que se le manda al modelo. Esta separado de la llamada a la API
