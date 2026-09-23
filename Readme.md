@@ -525,3 +525,119 @@ El servicio registra los tokens de entrada y salida devueltos por Anthropic para
 - `src/services/trusts.service.ts`: obtiene los datos actuales del fideicomiso.
 - `src/services/user.service.ts`: obtiene los documentos permitidos desde PostgreSQL.
 - `package.json`: contiene el script `llm` y la dependencia `@anthropic-ai/sdk`.
+
+## 11. API de chat y respuesta estructurada
+
+Este último commit agrega la capa de exposición HTTP para que la aplicación pueda responder preguntas reales desde un cliente o un frontend. La diferencia clave con la etapa anterior es que ya no solo se ejecuta una prueba desde consola; ahora existe una ruta HTTP que acepta el `userId` y el `message`, ejecuta el flujo completo de RAG y devuelve una respuesta estructurada.
+
+### Flujo del endpoint
+
+```text
+Cliente HTTP
+   │
+   ├── POST /api/chat
+   │       body: { userId, message }
+   │
+   ├── chat(userId, question)
+   │       ├── PostgreSQL: usuarios y documentos permitidos
+   │       ├── ChromaDB: chunks semánticos filtrados por permisos
+   │       ├── API mock: datos del fideicomiso del usuario
+   │       ├── Prompt: contexto + trust data + pregunta
+   │       └── Claude Haiku: respuesta final
+   │
+   └── JSON: { answer, sources }
+```
+
+### Rutas y servicios
+
+El punto de entrada es `src/routes/chat.routes.ts`. La ruta expone este endpoint:
+
+```http
+POST /api/chat
+Content-Type: application/json
+```
+
+Payload esperado:
+
+```json
+{
+  "userId": "USR001",
+  "message": "¿Qué debo pagar si quiero desistir de mi fideicomiso?"
+}
+```
+
+La ruta valida que `userId` y `message` sean cadenas no vacías; si la validación falla, responde con un error `400`. Si la operación interna falla, devuelve `500`.
+
+La lógica principal vive en `src/services/chat.service.ts` y hace este flujo:
+
+1. obtiene los documentos autorizados para el usuario con `getUserDocuments(userId)`;
+2. ejecuta la recuperación vectorial con `getChunks(question, documentIds)`;
+3. consulta la información del fideicomiso con `getTrusts(userId)`;
+4. si no existen chunks ni datos de confianza, devuelve un mensaje seguro de ausencia de información;
+5. arma el prompt con `buildPrompt(question, chunks, trusts)`;
+6. ejecuta `generateResponse(prompt)`;
+7. devuelve la respuesta junto con las fuentes utilizadas.
+
+### Respuesta estructurada
+
+La salida final tiene la siguiente forma:
+
+```json
+{
+  "answer": "El cálculo se hace sobre el saldo actual del fideicomiso. Con un saldo de 12.000.000 COP, el 3% equivale a 360.000 COP y más 5.000 COP de gastos, para un total de 365.000 COP.",
+  "sources": [
+    {
+      "documentId": "DOC001",
+      "documentName": "contrato-fideicomiso.pdf",
+      "chunkIndex": 7,
+      "distance": 0.31
+    }
+  ]
+}
+```
+
+Este formato es importante porque separa claramente dos capas:
+
+- `answer`: la respuesta final en lenguaje natural para el cliente.
+- `sources`: la trazabilidad de los chunks que sustentan la respuesta, con el documento, el fragmento y la distancia calculada.
+
+### Integración en el servidor
+
+`src/server.ts` registra la ruta bajo el prefijo `/api`:
+
+```ts
+app.use("/api", chatRoutes);
+```
+
+Además, el servidor expone el healthcheck de la aplicación en `GET /health` y mantiene la ruta `/mock` para los datos de prueba del fideicomiso. De esta forma, el backend queda listo para ser consumido por un frontend o por una API externa sin depender de ejecuciones manuales desde consola.
+
+### Mejora de resiliencia
+
+En el último commit también se ajusta la inicialización de Anthropic para agregar reintentos con `maxRetries: 5` en `src/services/llm.service.ts`. Esto mejora la tolerancia a fallos transitorios cuando el proveedor responde con un error temporal o una latencia alta. En un flujo de producción real, esta pequeña configuración ayuda a que la aplicación sea más robusta sin cambiar la lógica del prompt o del RAG.
+
+### Archivos relacionados
+
+- `src/routes/chat.routes.ts`: expone la API REST para conversar con el sistema.
+- `src/services/chat.service.ts`: orquesta la recuperación, la consulta a la API mock y la generación final.
+- `src/server.ts`: registra la ruta `/api` y mantiene el servicio levantado en Express.
+- `src/services/llm.service.ts`: genera el prompt y ahora incluye reintentos del cliente de Anthropic.
+- `src/services/rag.service.ts`: recupera los chunks relevantes.
+- `src/services/trusts.service.ts`: consulta los datos actuales del fideicomiso.
+
+### Ejecución
+
+En una terminal, levanta el backend:
+
+```bash
+npm run dev
+```
+
+Luego puedes realizar la consulta desde cualquier cliente HTTP:
+
+```bash
+curl -X POST http://localhost:3000/api/chat \
+  -H "Content-Type: application/json" \
+  -d '{"userId":"USR001","message":"¿Qué debo pagar si quiero desistir de mi fideicomiso?"}'
+```
+
+Con esto, la aplicación ya no es solo un experimento de investigación: pasa a ser una API operativa de chat con contexto documental, permisos, datos de confianza y generación final mediante LLM.
