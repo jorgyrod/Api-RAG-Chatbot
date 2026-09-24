@@ -1,0 +1,50 @@
+services:
+  postgres:
+    image: postgres:17
+    container_name: rag-postgresdb
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?falta POSTGRES_PASSWORD en .env}
+      POSTGRES_DB: ragchatbot
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  chroma:
+    image: chromadb/chroma:latest
+    container_name: rag-chromadb
+    restart: unless-stopped
+    volumes:
+      - chroma-data:/data
+
+  backend:
+    build: ./
+    container_name: rag-backend-chat
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      PORT: 3000
+      DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD}@postgres:5432/ragchatbot
+      ADMIN_DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD}@postgres:5432/postgres
+      CHROMA_HOST: chroma
+      CHROMA_PORT: 8000
+      API_BASE_URL: http://localhost:3000
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:?falta ANTHROPIC_API_KEY en .env}
+    volumes:
+      - ./data:/app/data
+      - ./storage:/app/storage
+    depends_on:
+      postgres:
+        condition: service_healthy
+      chroma:
+        condition: service_started
+
+volumes:
+  pg-data:
+  chroma-data:

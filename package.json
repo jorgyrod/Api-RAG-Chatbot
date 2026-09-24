@@ -17,7 +17,9 @@
     "ingest": "tsx src/ingest/ingest.ts",
     "retrieval": "tsx src/scripts/retrieval.ts",
     "trusts": "tsx src/scripts/trusts.ts",
-    "llm": "tsx src/scripts/llm.ts"
+    "llm": "tsx src/scripts/llm.ts",
+    "start": "tsx src/server.ts",
+    "model:export": "tsx src/scripts/model-export.ts"
   },
   "keywords": [
     "RAG",
@@ -33,7 +35,8 @@
     "exceljs": "^4.4.0",
     "express": "^5.2.1",
     "pdf-parse": "^2.4.5",
-    "pg": "^8.23.0"
+    "pg": "^8.23.0",
+    "tsx": "^4.23.15"
   },
   "devDependencies": {
     "@types/cors": "^2.8.19",
@@ -42,7 +45,6 @@
     "@types/pdfkit": "^0.17.6",
     "@types/pg": "^8.23.1",
     "pdfkit": "^0.20.2",
-    "tsx": "^4.23.15",
     "typescript": "^7.0.2"
   },
   "overrides": {
