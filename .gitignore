@@ -14,7 +14,6 @@ backend/storage/documents/*.docx
 backend/fixtures/manifest.xlsx
 
 # Modelo ONNX descargado por @chroma-core/default-embed
-.cache/
 !models/.gitkeep
 !models/
 
