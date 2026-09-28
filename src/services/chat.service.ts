@@ -1,7 +1,12 @@
 import { getUserDocuments } from "./user.service";
 import { getChunks } from "./rag.service";
 import { getTrusts } from "./trusts.service";
-import { buildPrompt, generateResponse } from "./llm.service";
+import {
+  buildPrompt,
+  generateResponse,
+  rewriteQuestion,
+  Turn,
+} from "./llm.service";
 
 export type Source = {
   documentId: string;
@@ -13,15 +18,23 @@ export type Source = {
 export type ChatResponse = {
   answer: string;
   sources: Source[];
+  searchedFor: string;
 };
+
+const TURNS_MAX = 6;
 
 export async function chat(
   userId: string,
   question: string,
+  history: Turn[] = [],
 ): Promise<ChatResponse> {
+  const context = history.slice(-TURNS_MAX);
+
+  const questionSearchedFor = await rewriteQuestion(context, question);
+
   const documentIds = await getUserDocuments(userId);
 
-  const chunks = await getChunks(question, documentIds);
+  const chunks = await getChunks(questionSearchedFor, documentIds);
 
   const trusts = await getTrusts(userId);
 
@@ -29,11 +42,12 @@ export async function chat(
     return {
       answer: "No relevant documents or trusted sources found.",
       sources: [],
+      searchedFor: questionSearchedFor,
     };
   }
 
   const prompt = buildPrompt(question, chunks, trusts);
-  const answer = await generateResponse(prompt);
+  const answer = await generateResponse(prompt, context);
 
   const sources: Source[] = chunks.map((chunk) => ({
     documentId: chunk.documentId,
@@ -45,5 +59,6 @@ export async function chat(
   return {
     answer,
     sources,
+    searchedFor: questionSearchedFor,
   };
 }
